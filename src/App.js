@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import logo from './logo.svg';
 import './App.css';
+import fetchJsonp from 'fetch-jsonp';
 
 class App extends Component {
   constructor(props){
@@ -35,27 +36,23 @@ class App extends Component {
     this.setState({date: e.target.value});
   }
   componentDidMount() {
-      fetch('https://finance.google.com/finance/info?q=NASDAQ:GOOGL',{
+    const url = 'http://finance.google.com/finance/info?q=NASDAQ:AAPL,NASDAQ:GOOG,NASDAQ:V'
+    fetchJsonp(url,{
       method: 'GET',
       mode: 'no-cors',
-      headers: {
-        'Accept' : 'application/json, text/plain, */*',
-        'Content-Type': 'application/json, text/html; charset=ISO-8859-1'},
-        //body : JSON.stringify({data: data})
-      })
-      //.then(res => res.json())
-      .then(response =>{
-        console.log(JSON.stringify(response));
-        this.setState({
-          data: response
-        })
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+      json: true,
+      headers:{
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials':true,
+        'Access-Control-Allow-Methods':'POST, GET'
+      }
+    })
+    .then(response => response.json())
+    .then(json => this.setState({data: json}));
   }
 
   render() {
+    console.log(this.state.data)
     return (
       <div className="App">
         <div className="App-header">
@@ -71,6 +68,12 @@ class App extends Component {
           <h4> {this.state.price}</h4>
           <h4> {this.state.quantity}</h4>
           <h4> {this.state.date}</h4>
+          {this.state.data.map((stock, index) => 
+            <div key={index} className="test">
+            <h4> {stock.t}</h4>
+            </div>
+            )}
+
         </div>
       </div>
     );
