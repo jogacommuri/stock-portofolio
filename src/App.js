@@ -22,9 +22,6 @@ class App extends Component {
 
   };
 
-  updateState(e){
-    this.setState({data: e.target.value});
-  }
   updateSymbol(e){
     this.setState({symbol: e.target.value});
   }
