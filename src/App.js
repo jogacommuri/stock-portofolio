@@ -1,9 +1,10 @@
 import React, { Component } from 'react';
 //import { render } from 'react-dom';
-import logo from './logo.svg';
+import logo from './logo_1.png';
 import './App.css';
 import fetchJsonp from 'fetch-jsonp';
-import { Button, Form, FormGroup, FormControl} from 'react-bootstrap/lib';
+import { Button, Form, FormGroup, FormControl, Modal, Col} from 'react-bootstrap/lib';
+
 class App extends Component {
   constructor(props){
     super(props);
@@ -14,16 +15,37 @@ class App extends Component {
       quantity: '',
       date: '',
       stockData: {},
-      stocksFinalData:[]
+      modalContent:'',
+      showModal: false,
+      stocksFinalData:(localStorage.getItem(('stocksFinalData')) ? (JSON.parse(localStorage.getItem('stocksFinalData'))) : [] ) 
     }
     this.updateSymbol = this.updateSymbol.bind(this);
     this.updatePrice = this.updatePrice.bind(this);
     this.updateQunatity = this.updateQunatity.bind(this);
     this.updateDate = this.updateDate.bind(this);
     this.updateStock = this.updateStock.bind(this);
+    this.updateModalSymbol = this.updateModalSymbol.bind(this);
+    this.updateModalPrice = this.updateModalPrice.bind(this);
+    this.updateModalQunatity = this.updateModalQunatity.bind(this);
+    this.updateModalDate = this.updateModalDate.bind(this);
     this.calculateStockData = this.calculateStockData.bind(this);
+    this.removeStock = this.removeStock.bind(this);
   };
-
+  /**
+   * Shows edit modal.
+   */
+  handleOpenModal (targetOffer) {
+    this.setState({
+      showModal: true,
+      modalContent: targetOffer
+    });
+  }
+  /**
+  * Hides edit modal.
+   */
+  handleCloseModal () {
+      this.setState({ showModal: false });
+  }
   updateSymbol(e){
     this.setState({symbol: e.target.value});
   }
@@ -36,14 +58,82 @@ class App extends Component {
   updateDate(e){
     this.setState({date: e.target.value});
   }
-  updateStock(symbol){
-    this.setState({stockData:{symbol:this.state.symbol,price:this.state.price,quantity:this.state.quantity,date:this.state.date}},
+  updateModalSymbol(e){
+    this.setState({ modalContent : Object.assign({}, this.state.modalContent , {symbol: e.target.value})})
+    //this.state.modalContent.symbol = e.target.value;
+    //this.setState({modalContent:{symbol: e.target.value}})
+  }
+  updateModalPrice(e){
+    this.setState({ modalContent : Object.assign({}, this.state.modalContent , {price: e.target.value})})
+    //this.setState({modalContent:{price: e.target.value}})
+  }
+  updateModalQunatity(e){
+    this.setState({ modalContent : Object.assign({}, this.state.modalContent , {quantity: e.target.value})})
+    //this.setState({modalContent:{quantity: e.target.value}})
+  }
+  updateModalDate(e){
+    this.setState({ modalContent : Object.assign({}, this.state.modalContent , {date: e.target.value})})
+    //this.setState({modalContent:{date: e.target.value}})
+  }
+  removeStock(targetStock){
+    console.log(targetStock);
+    var stocks = this.state.stocksFinalData;
+    for(var i=0;i<stocks.length;i++){
+      if(stocks[i].symbol === targetStock.symbol){
+         console.log(stocks[i].symbol);
+         stocks.splice(stocks[i,1])
+         console.log(stocks);
+      }else {
+        console.log("false")
+      }
+    }
+    this.setLocalStorage(this.state.stocksFinalData)
+    this.handleCloseModal();
+  }
+  updateModalContent(modalContent){
+    console.log(modalContent)
+    var stocks = this.state.stocksFinalData;
+    for(var i=0;i<stocks.length;i++){
+      if(stocks[i].symbol === modalContent.symbol){
+        console.log(stocks[i].symbol);
+        stocks[i] = modalContent;
+        stocks[i].value = stocks[i].price * stocks[i].quantity;
+        stocks[i].profit = ((stocks[i].currPrice * stocks[i].quantity) - stocks[i].value);
+        this.setState({stocksFinalData: stocks})
+      } else {
+        console.log("false")
+      }
+    }
+    this.setLocalStorage(this.state.stocksFinalData)
+    this.handleCloseModal();
+  }
+  clearInputFields(){
+      this.setState({symbol:''})
+      this.setState({price:''})
+      this.setState({quantity:''})
+      this.setState({date:''})
+  }
+  updateStock(){
+    var value = (this.state.price * this.state.quantity);
+    var currValue = (this.state.data[0].l * this.state.quantity)
+    var profit = (currValue - value)
+    this.setState({stockData:{
+                              symbol:this.state.symbol,
+                              price:this.state.price,
+                              quantity:this.state.quantity,
+                              date:this.state.date,
+                              value: value,
+                              currPrice: this.state.data[0].l,
+                              profit: profit}},
       () => this.setState({
         stocksFinalData: this.state.stocksFinalData.concat(this.state.stockData)
-      }))
+      },() => this.setLocalStorage(this.state.stocksFinalData)))
     
-    //this.state.stocksFinalData.push(this.state.stockData)
-    this.calculateStockData(symbol)
+    this.clearInputFields();
+
+  }
+  setLocalStorage(stocksFinalData){
+    localStorage.setItem('stocksFinalData', JSON.stringify(stocksFinalData));
   }
   calculateStockData(symbol) {
     
@@ -60,17 +150,62 @@ class App extends Component {
       }
     })
     .then(response => response.json())
-    .then(json => this.setState({data: json}));
+    .then(json => this.setState({data: json},() => this.updateStock()))
+    
+  
   }
 
   render() {
     //console.log(this.state.data)
+     const style ={
+        color: '#333',
+        textAlign: 'center'
+      }
     return (
+      
       <div className="App">
         <div className="App-header">
           <img src={logo} className="App-logo" alt="logo" />
-          <h2>Stock Portfolio App</h2>
         </div>
+        {this.state.modalContent &&
+          <Modal show={this.state.showModal} onHide={this.handleCloseModal} style={{top:'20%'}} className="modal-offer">
+              <Modal.Header closeButton>
+                <Modal.Title>
+                  <p>Edit Details</p>
+                </Modal.Title>
+              </Modal.Header>
+              <Modal.Body>
+                <div className="container">
+                <Col lg={12} md={12} sm={12} xs={12}>
+                  <Form inline>
+                    <FormGroup controlId="symbol">
+                      <FormControl type="text" placeholder="Symbol" value={this.state.modalContent.symbol} onChange={this.updateModalSymbol}/>
+                    </FormGroup>
+                    {' '}
+                    <FormGroup controlId="price">
+                      <FormControl type="number" placeholder="Price" value={this.state.modalContent.price} onChange={this.updateModalPrice}/>
+                    </FormGroup>
+                    {' '}
+                    <FormGroup controlId="quantity">
+                      <FormControl type="number" placeholder="Qty" value={this.state.modalContent.quantity} onChange={this.updateModalQunatity}/>
+                    </FormGroup>
+                    {' '}
+                    <FormGroup controlId="date">
+                      <FormControl type="date" placeholder="DD/MM/YYYY" value={this.state.modalContent.date} onChange={this.updateModalDate}/>
+                    </FormGroup>
+                    {' '}
+                    <Button onClick={() => {{this.updateModalContent(this.state.modalContent)}}}>
+                      Edit
+                    </Button>
+                  </Form>
+                </Col>
+                <Col className="modal-offer-details" md={9}>
+                  
+                </Col>
+                </div>                          
+              </Modal.Body>
+            </Modal>
+        }
         <div className="container">
           <div className = "row">
             <Form inline>
@@ -90,18 +225,26 @@ class App extends Component {
                 <FormControl type="date" placeholder="DD/MM/YYYY" value={this.state.date} onChange={this.updateDate}/>
               </FormGroup>
               {' '}
-              <Button onClick={() => {{this.updateStock(this.state.symbol)}}}>
+              <Button onClick={() => {{this.calculateStockData(this.state.symbol)}}}>
                 +
               </Button>
             </Form>
-            {this.state.data.map((stock, index) => 
-              <div className="container">
+            {this.state.stocksFinalData.map((stock, index) => 
+              <div className="container" key={index}>
                 <div className="row">
-                  <div className="col-lg-4 col-md-4" key={index}>
-                    <p> {this.state.symbol} / {this.state.price} * {this.state.quantity} </p>
-                  </div>
-                  <div className="col-lg-4 col-md-4" >
-                    <p> {stock.t} / {stock.l} </p>
+                  <div className="col-lg-offset-2 col-md-offset-2 col-sm-12 col-xs-12 col-lg-8 col-md-8" style={style}>
+                    <span>
+                      <p> {stock.symbol} / {stock.price} * {stock.quantity} = {stock.value} / {stock.date}</p>
+                      {stock.profit >0 ? <p className="profit"> {stock.currPrice} / {stock.profit}</p> : <p className="loss"> {stock.currPrice} / {stock.profit}</p>}
+                    </span>
+                    </div>
+                    <div className="col-sm-12 col-xs-12 col-lg-2 col-md-2" style={style}>
+                    <Button onClick={() => {{this.handleOpenModal(stock)}}}>
+                     Edit
+                    </Button>
+                    <Button onClick={() => {{this.removeStock(stock)}}}>
+                     Delete
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -109,6 +252,7 @@ class App extends Component {
           </div>
         </div>   
       </div>
+      
     );
   }
 }
