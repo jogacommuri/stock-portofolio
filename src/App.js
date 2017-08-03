@@ -13,13 +13,15 @@ class App extends Component {
       price: '',
       quantity: '',
       date: '',
-      stockDate: []
+      stockData: {},
+      stocksFinalData:[]
     }
     this.updateSymbol = this.updateSymbol.bind(this);
     this.updatePrice = this.updatePrice.bind(this);
     this.updateQunatity = this.updateQunatity.bind(this);
     this.updateDate = this.updateDate.bind(this);
-
+    this.updateStock = this.updateStock.bind(this);
+    this.calculateStockData = this.calculateStockData.bind(this);
   };
 
   updateSymbol(e){
@@ -34,10 +36,19 @@ class App extends Component {
   updateDate(e){
     this.setState({date: e.target.value});
   }
-  calculateStockDate(symbol) {
-
+  updateStock(symbol){
+    this.setState({stockData:{symbol:this.state.symbol,price:this.state.price,quantity:this.state.quantity,date:this.state.date}},
+      () => this.setState({
+        stocksFinalData: this.state.stocksFinalData.concat(this.state.stockData)
+      }))
+    
+    //this.state.stocksFinalData.push(this.state.stockData)
+    this.calculateStockData(symbol)
+  }
+  calculateStockData(symbol) {
+    
     //console.log(symbol)
-    var url = "http://finance.google.com/finance/info?q=NASDAQ:GOOG,NASDAQ:FB,NASDAQ:"+symbol
+    var url = "http://finance.google.com/finance/info?q=NASDAQ:"+symbol
     fetchJsonp(url,{
       method: 'GET',
       mode: 'no-cors',
@@ -53,7 +64,7 @@ class App extends Component {
   }
 
   render() {
-    console.log(this.state.data)
+    //console.log(this.state.data)
     return (
       <div className="App">
         <div className="App-header">
@@ -79,7 +90,7 @@ class App extends Component {
                 <FormControl type="date" placeholder="DD/MM/YYYY" value={this.state.date} onChange={this.updateDate}/>
               </FormGroup>
               {' '}
-              <Button onClick={() => {{this.calculateStockDate(this.state.symbol)}}}>
+              <Button onClick={() => {{this.updateStock(this.state.symbol)}}}>
                 +
               </Button>
             </Form>
@@ -89,7 +100,7 @@ class App extends Component {
                   <div className="col-lg-4 col-md-4" key={index}>
                     <p> {this.state.symbol} / {this.state.price} * {this.state.quantity} </p>
                   </div>
-                  <div className="col-lg-4 col-md-4">
+                  <div className="col-lg-4 col-md-4" >
                     <p> {stock.t} / {stock.l} </p>
                   </div>
                 </div>
