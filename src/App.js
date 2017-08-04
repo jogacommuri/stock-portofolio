@@ -17,6 +17,7 @@ class App extends Component {
       stockData: {},
       modalContent:'',
       showModal: false,
+      showErrorModal: false,
       stocksFinalData:(localStorage.getItem(('stocksFinalData')) ? (JSON.parse(localStorage.getItem('stocksFinalData'))) : [] ) 
     }
     this.updateSymbol = this.updateSymbol.bind(this);
@@ -30,6 +31,8 @@ class App extends Component {
     this.updateModalDate = this.updateModalDate.bind(this);
     this.calculateStockData = this.calculateStockData.bind(this);
     this.removeStock = this.removeStock.bind(this);
+    //this.showErrorModal = this.showErrorModal.bind(this);
+    this.handleCloseErrorModal = this.handleCloseErrorModal.bind(this);
   };
   /**
    * Shows edit modal.
@@ -46,6 +49,9 @@ class App extends Component {
   handleCloseModal () {
       this.setState({ showModal: false });
   }
+  handleCloseErrorModal () {
+      this.setState({ showErrorModal: false });
+  }
   updateSymbol(e){
     this.setState({symbol: e.target.value});
   }
@@ -60,20 +66,17 @@ class App extends Component {
   }
   updateModalSymbol(e){
     this.setState({ modalContent : Object.assign({}, this.state.modalContent , {symbol: e.target.value})})
-    //this.state.modalContent.symbol = e.target.value;
-    //this.setState({modalContent:{symbol: e.target.value}})
   }
   updateModalPrice(e){
     this.setState({ modalContent : Object.assign({}, this.state.modalContent , {price: e.target.value})})
-    //this.setState({modalContent:{price: e.target.value}})
+
   }
   updateModalQunatity(e){
     this.setState({ modalContent : Object.assign({}, this.state.modalContent , {quantity: e.target.value})})
-    //this.setState({modalContent:{quantity: e.target.value}})
+
   }
   updateModalDate(e){
     this.setState({ modalContent : Object.assign({}, this.state.modalContent , {date: e.target.value})})
-    //this.setState({modalContent:{date: e.target.value}})
   }
   removeStock(targetStock){
     console.log(targetStock);
@@ -81,7 +84,7 @@ class App extends Component {
     for(var i=0;i<stocks.length;i++){
       if(stocks[i].symbol === targetStock.symbol){
          console.log(stocks[i].symbol);
-         stocks.splice(stocks[i,1])
+         stocks.splice(i,1)
          console.log(stocks);
       }else {
         console.log("false")
@@ -138,21 +141,36 @@ class App extends Component {
   calculateStockData(symbol) {
     
     //console.log(symbol)
-    var url = "http://finance.google.com/finance/info?q=NASDAQ:"+symbol
-    fetchJsonp(url,{
-      method: 'GET',
-      mode: 'no-cors',
-      json: true,
-      headers:{
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Credentials':true,
-        'Access-Control-Allow-Methods':'POST, GET'
-      }
-    })
-    .then(response => response.json())
-    .then(json => this.setState({data: json},() => this.updateStock()))
-    
-  
+    if(symbol && this.state.price && this.state.quantity){
+      var url = "http://finance.google.com/finance/info?q=NASDAQ:"+symbol
+      fetchJsonp(url,{
+        method: 'GET',
+        mode: 'no-cors',
+        json: true,
+        headers:{
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Credentials':true,
+          'Access-Control-Allow-Methods':'POST, GET'
+        }
+      })
+      .then(response => response.json())
+      .then(json => this.setState({data: json},() => this.updateStock()))
+    }
+    else{
+      this.setState({showErrorModal: true})
+    }
+  }
+  validatePrice(e) {
+    const res = /^[0-9.]+([0-9][0-9])?$/;
+    if (!res.test(e.key)) {
+      e.preventDefault();
+    }
+  }
+  validateQuantity(e) {
+    const re = /[0-9]+/g;
+    if (!re.test(e.key)) {
+      e.preventDefault();
+    }
   }
 
   render() {
@@ -167,6 +185,18 @@ class App extends Component {
         <div className="App-header">
           <img src={logo} className="App-logo" alt="logo" />
         </div>
+        
+          <Modal show={this.state.showErrorModal} onHide={this.handleCloseErrorModal} style={{top:'20%'}} className="modal-offer">
+              <Modal.Header closeButton>
+              <Modal.Title>
+                  <p>Error</p>
+                </Modal.Title>
+                <Modal.Body>
+                  <p>Please enter all the Details</p>
+                </Modal.Body>
+                </Modal.Header>
+          </Modal>
+
         {this.state.modalContent &&
           <Modal show={this.state.showModal} onHide={this.handleCloseModal} style={{top:'20%'}} className="modal-offer">
               <Modal.Header closeButton>
@@ -210,19 +240,19 @@ class App extends Component {
           <div className = "row">
             <Form inline>
               <FormGroup controlId="symbol">
-                <FormControl type="text" placeholder="Symbol" value={this.state.symbol} onChange={this.updateSymbol}/>
+                <FormControl type="text" placeholder="Symbol"  required={true} value={this.state.symbol} onChange={this.updateSymbol} />
               </FormGroup>
               {' '}
               <FormGroup controlId="price">
-                <FormControl type="number" placeholder="Price" value={this.state.price} onChange={this.updatePrice}/>
+                <FormControl type="number" placeholder="Price" onKeyPress={(e) => this.validatePrice(e)} required={true} value={this.state.price} onChange={this.updatePrice}/>
               </FormGroup>
               {' '}
               <FormGroup controlId="quantity">
-                <FormControl type="number" placeholder="Qty" value={this.state.quantity} onChange={this.updateQunatity}/>
+                <FormControl type="number" placeholder="Qty" onKeyPress={(e) => this.validateQuantity(e)} required={true} value={this.state.quantity} onChange={this.updateQunatity}/>
               </FormGroup>
               {' '}
               <FormGroup controlId="date">
-                <FormControl type="date" placeholder="DD/MM/YYYY" value={this.state.date} onChange={this.updateDate}/>
+                <FormControl type="date" placeholder="DD/MM/YYYY" required={true} value={this.state.date} onChange={this.updateDate}/>
               </FormGroup>
               {' '}
               <Button onClick={() => {{this.calculateStockData(this.state.symbol)}}}>
@@ -242,6 +272,7 @@ class App extends Component {
                     <Button onClick={() => {{this.handleOpenModal(stock)}}}>
                      Edit
                     </Button>
+                    {' '}
                     <Button onClick={() => {{this.removeStock(stock)}}}>
                      Delete
                     </Button>
